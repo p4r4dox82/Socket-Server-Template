@@ -11,10 +11,7 @@ const WebSocket = require("ws");
 
 let keepAliveId;
 
-const wss =
-  process.env.NODE_ENV === "production"
-    ? new WebSocket.Server({ server })
-    : new WebSocket.Server({ port: 5001 });
+const wss = new WebSocket.Server({ server });
 
 server.listen(serverPort);
 console.log(`Server started on port ${serverPort} in stage ${process.env.NODE_ENV}`);
@@ -80,4 +77,13 @@ const broadcast = (ws, message, includeSelf) => {
 
 app.get('/', (req, res) => {
     res.send('Hello World!');
+});
+
+// 서버 상태 확인 엔드포인트
+app.get('/status', (req, res) => {
+    res.json({
+        status: 'active',
+        connectedClients: wss.clients.size,
+        timestamp: new Date().toISOString()
+    });
 });
