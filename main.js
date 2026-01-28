@@ -1,15 +1,17 @@
 const http = require("http");
 const express = require("express");
 const app = express();
+const { v4: uuidv4 } = require("uuid");
+const WebSocket = require("ws");
 
 app.use(express.static("public"));
 // require("dotenv").config();
 
 const serverPort = process.env.PORT || 3000;
 const server = http.createServer(app);
-const WebSocket = require("ws");
 
 let keepAliveId;
+const clients = new Map(); // 클라이언트 ID와 WebSocket 객체를 매핑
 
 const wss = new WebSocket.Server({ server });
 
@@ -17,10 +19,21 @@ server.listen(serverPort);
 console.log(`Server started on port ${serverPort} in stage ${process.env.NODE_ENV}`);
 
 wss.on("connection", function (ws, req) {
-  console.log("Connection Opened");
-  console.log("Client size: ", wss.clients.size);
+  const clientId = uuidv4();
+  clients.set(clientId, ws);
+  ws.clientId = clientId;
 
-  if (wss.clients.size === 1) {
+  console.log(`✅ Client connected | ID: ${clientId} | Total: ${clients.size}`);
+
+  // 클라이언트에 ID 전송
+  ws.send(JSON.stringify({
+    type: 'connection',
+    clientId: clientId,
+    message: 'Welcome to WebSocket Server',
+    timestamp: new Date().toISOString()
+  }));
+
+  if (clients.size === 1) {
     console.log("first connection. starting keepalive");
     keepServerAlive();
   }
@@ -35,9 +48,10 @@ wss.on("connection", function (ws, req) {
   });
 
   ws.on("close", (data) => {
-    console.log("closing connection");
+    console.log(`❌ Client disconnected | ID: ${clientId} | Remaining: ${clients.size - 1}`);
+    clients.delete(clientId);
 
-    if (wss.clients.size === 0) {
+    if (clients.size === 0) {
       console.log("last client disconnected, stopping keepAlive interval");
       clearInterval(keepAliveId);
     }
@@ -83,7 +97,8 @@ app.get('/', (req, res) => {
 app.get('/status', (req, res) => {
     res.json({
         status: 'active',
-        connectedClients: wss.clients.size,
+        connectedClients: clients.size,
+        clientIds: Array.from(clients.keys()),
         timestamp: new Date().toISOString()
     });
 });
