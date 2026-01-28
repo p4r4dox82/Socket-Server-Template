@@ -150,10 +150,18 @@ app.get('/', (req, res) => {
 
 // 서버 상태 확인 엔드포인트
 app.get('/status', (req, res) => {
+    const clientList = Array.from(clients.entries()).map(([id, data]) => ({
+        clientId: id,
+        webrtcPort: data.webrtcPort
+    }));
+
     res.json({
         status: 'active',
-        connectedClients: clients.size,
-        clientIds: Array.from(clients.keys()),
+        totalClients: clients.size,
+        totalAvailablePorts: availablePorts.size,
+        portRange: `${WEBRTC_BASE_PORT}-${WEBRTC_BASE_PORT + TOTAL_WEBRTC_PORTS - 1}`,
+        clients: clientList,
+        availablePorts: Array.from(availablePorts).sort((a, b) => a - b),
         timestamp: new Date().toISOString()
     });
 });
