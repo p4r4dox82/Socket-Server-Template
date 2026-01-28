@@ -63,6 +63,18 @@ wss.on("connection", function (ws, req) {
   console.log(`✅ Client connected | ID: ${clientId} | Port: ${webrtcPort} | Total: ${clients.size} | Available: ${availablePorts.size}/${TOTAL_WEBRTC_PORTS}`);
 
   // 환영 메시지 + 클라이언트 ID + WebRTC 포트 전송
+  if (webrtcPort === null) {
+    console.warn(`⚠️  No available ports for client ${clientId}. Sending error.`);
+    ws.send(JSON.stringify({
+      type: 'error',
+      message: 'No available WebRTC ports',
+      timestamp: new Date().toISOString()
+    }));
+    ws.close(1008, 'No available ports');
+    clients.delete(clientId);
+    return;
+  }
+
   ws.send(JSON.stringify({
     type: 'connection',
     clientId: clientId,
